@@ -1,0 +1,8 @@
+---
+- name: Install and Configure Valkey Cluster
+  hosts: metadb_nodes
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - role: s3stor_valkey_deploy

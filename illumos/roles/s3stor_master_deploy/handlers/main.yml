@@ -1,0 +1,10 @@
+---
+- name: Import SMF service
+  ansible.builtin.command: svccfg import /var/svc/manifest/site/s3stor-master.xml
+  become: true
+  changed_when: false
+
+- name: Refresh S3Stor service
+  ansible.builtin.command: svcadm refresh s3stor-master
+  become: true
+  changed_when: false

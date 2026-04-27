@@ -1,0 +1,30 @@
+<?xml version='1.0'?>
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<service_bundle type='manifest' name='site/s3stor-master'>
+  <service name='site/s3stor-master' type='service' version='1'>
+    <create_default_instance enabled='false'/>
+    <single_instance/>
+    
+    <dependency name='network' grouping='require_all' restart_on='refresh' type='service'>
+      <service_fmri value='svc:/network/physical:default'/>
+    </dependency>
+    
+    <exec_method type='method' name='start' exec='/opt/s3stor/bin/s3stor-master-smf.sh' timeout_seconds='60'/>
+    <exec_method type='method' name='stop' exec=':kill' timeout_seconds='60'/>
+    
+    <property_group name='general' type='framework'>
+      <propval name='action_authorization' type='astring' value='solaris.smf.manage.s3stor-master'/>
+    </property_group>
+    
+    <stability value='Evolving'/>
+    
+    <template>
+      <common_name>
+        <loctext xml:lang='C'>S3Stor Master Service</loctext>
+      </common_name>
+      <documentation>
+        <manpage title='s3stor-master' section='1'/>
+      </documentation>
+    </template>
+  </service>
+</service_bundle>

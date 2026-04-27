@@ -1,0 +1,13 @@
+---
+# LOCAL DIRECTORY PATH on the Ansible Control Node
+# This is the source directory containing the files to copy
+s3stor_software: "./files/s3stor_software" 
+
+# Destination path on the front nodes
+s3stor_dest_path: "/opt/s3stor"
+
+# Owner/Group for the copied files on remote hosts
+s3stor_file_owner: root
+s3stor_file_group: root
+s3stor_file_mode: '0755'
+

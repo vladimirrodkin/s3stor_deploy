@@ -1,0 +1,18 @@
+- hosts: front_nodes
+  gather_facts: true
+  become: true
+  roles:
+    - role: s3stor_master_deploy
+      # Override the local source directory path
+      s3stor_software: "./s3stor_software"
+- hosts: volume_nodes
+  gather_facts: true
+  become: true
+  roles:
+    - role: s3stor_volume_deploy
+- hosts: s3_nodes
+  gather_facts: true
+  become: true
+  roles:
+    - role: s3stor_s3_deploy
+

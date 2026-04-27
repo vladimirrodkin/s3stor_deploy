@@ -1,0 +1,14 @@
+---
+# Become / Privilege Escalation Settings (Front Nodes Only)
+
+metadb_nodes:
+  hosts:
+    meta1:
+      ansible_host: 192.168.122.133
+
+    meta2:
+      ansible_host: 192.168.122.134
+
+    meta3:
+      ansible_host: 192.168.122.135
+

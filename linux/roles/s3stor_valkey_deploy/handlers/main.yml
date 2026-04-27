@@ -1,0 +1,7 @@
+- name: Reload Systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Restart Valkey
+  ansible.builtin.shell: |
+    (nohup systemctl start valkey.service > /dev/null 2>&1 &)

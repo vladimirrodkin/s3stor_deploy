@@ -1,0 +1,30 @@
+---
+# Package Configuration
+lx_brand_package: "pkg:/system/zones/brand/lx"
+
+# ... (rest of variables unchanged)
+
+# Zone Configuration
+metadb_pool: "rpool"
+metadb_zone_name: "metadb"
+metadb_zone_brand: "lx"
+metadb_zone_image_id: "5e54d2e0"
+metadb_zone_path: "/zones/metadb"
+metadb_zone_autoboot: false
+
+# Network Configuration (Override in group_vars/front_nodes.yml)
+metadb_resolver: "192.168.1.1"
+metadb_defrouter: "192.168.122.1"
+metadb_allowed_address: "192.168.122.133/24"
+metadb_physical_nic: "metadb0"
+metadb_mac_addr: "2:8:20:32:da:2e"
+metadb_global_nic: "vioif0"
+
+# User Configuration
+metadb_username: "argo"
+metadb_password: "s3stor"
+metadb_user_shell: "/bin/bash"
+metadb_user_home: "/home/argo"
+
+# Kernel Version for LX Brand
+metadb_kernel_version: "4.4"

@@ -1,0 +1,268 @@
+---
+- name: Validate required variables are set
+  ansible.builtin.assert:
+    that:
+      - metadb_allowed_address is defined
+      - metadb_defrouter is defined
+      - metadb_resolver is defined
+    fail_msg: "Required network variables (metadb_allowed_address, metadb_defrouter, metadb_resolver) must be defined"
+  run_once: false
+
+- name: Check if ZFS dataset zones already exists
+  ansible.builtin.command: zfs list -H -o name {{ metadb_pool }}/zones
+  become: true
+  register: zones_dataset_exists
+  changed_when: false
+  failed_when: false
+
+- name: Create ZFS dataset for zones
+  ansible.builtin.command: pfexec zfs create -o mountpoint=/zones {{ metadb_pool }}/zones
+  become: true
+  register: zfs_create_result
+  changed_when: zfs_create_result.rc == 0
+  failed_when:
+    - zfs_create_result.rc != 0
+    - "'already exists' not in zfs_create_result.stderr"
+  when: zones_dataset_exists.rc != 0
+
+- name: Verify ZFS dataset properties
+  ansible.builtin.command: zfs get -H -o value mountpoint {{ metadb_pool }}/zones
+  become: true
+  register: zfs_props
+  changed_when: false
+  failed_when: false
+  when: zones_dataset_exists.rc == 0
+
+- name: Ensure ZFS mountpoint is set to /zones
+  ansible.builtin.command: pfexec zfs set mountpoint=/zones {{ metadb_pool }}/zones
+  become: true
+  changed_when: true
+  when:
+    - zones_dataset_exists.rc == 0
+    - "zfs_props.stdout is defined"
+    - "'/zones' not in zfs_props.stdout"
+
+- name: Ensure /zones directory exists
+  ansible.builtin.file:
+    path: /zones
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Check if LX brand package is installed
+  ansible.builtin.command: pkg info pkg:/system/zones/brand/lx
+  become: true
+  register: lx_brand_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install LX brand package for zones
+  ansible.builtin.command: pkg install pkg:/system/zones/brand/lx
+  become: true
+  register: pkg_install_result
+  changed_when: pkg_install_result.rc == 0
+  failed_when:
+    - pkg_install_result.rc != 0
+    - "'No updates necessary' not in pkg_install_result.stdout"
+  when: lx_brand_installed.rc != 0
+
+- name: Check if zadm command is available
+  ansible.builtin.command: which zadm
+  become: true
+  register: zadm_available
+  changed_when: false
+  failed_when: false
+
+- name: Install zone administration tools (zadm)
+  ansible.builtin.command: pkg install pkg:/ooce/util/zadm
+  become: true
+  register: zadm_install_result
+  changed_when: zadm_install_result.rc == 0
+  failed_when:
+    - zadm_install_result.rc != 0
+    - "'No updates necessary' not in zadm_install_result.stdout"
+  when: zadm_available.rc != 0
+
+- name: Verify zadm is now available
+  ansible.builtin.command: zadm --version
+  become: true
+  register: zadm_version
+  changed_when: false
+  failed_when: zadm_version.rc != 0
+
+- name: Verify LX brand is available
+  ansible.builtin.command: zadm brands | grep -w "lx"
+  become: true
+  register: lx_brand_available
+  changed_when: false
+  failed_when: lx_brand_available.rc != 0
+
+- name: Check if zone {{ metadb_zone_name }} already exists
+  ansible.builtin.shell: zoneadm list -cv | grep -w "{{ metadb_zone_name }}"
+  become: true
+  register: zone_exists
+  changed_when: false
+  failed_when: false
+
+- name: Deploy zone configuration JSON
+  ansible.builtin.template:
+    src: metadb.json.j2
+    dest: "/tmp/{{ metadb_zone_name }}.json"
+    mode: '0644'
+    owner: root
+    group: root
+  become: true
+  when: zone_exists.rc != 0
+
+- name: Create zone {{ metadb_zone_name }} using zadm
+  ansible.builtin.shell: pfexec zadm create -b {{ metadb_zone_brand }} -i {{ metadb_zone_image_id }} {{ metadb_zone_name }} < /tmp/{{ metadb_zone_name }}.json
+  become: true
+  register: zadm_create_result
+  changed_when: zadm_create_result.rc == 0
+  failed_when:
+    - zadm_create_result.rc != 0
+    - "'already exists' not in zadm_create_result.stderr"
+  when: zone_exists.rc != 0
+
+- name: Clean up temporary zone config file
+  ansible.builtin.file:
+    path: "/tmp/{{ metadb_zone_name }}.json"
+    state: absent
+  become: true
+  when: zone_exists.rc != 0
+
+- name: Boot zone {{ metadb_zone_name }}
+  ansible.builtin.command: pfexec zoneadm -z {{ metadb_zone_name }} boot
+  become: true
+  register: zone_boot_result
+  changed_when: zone_boot_result.rc == 0
+  failed_when:
+    - zone_boot_result.rc != 0
+    - "'is already running' not in zone_boot_result.stderr"
+  when: zone_exists.rc != 0 or "'running' not in zone_exists.stdout"
+
+#- name: Wait for zone to be fully booted
+#  ansible.builtin.shell: pfexec zadm list -H -b {{ metadb_zone_brand }} -s running {{ metadb_zone_name }} | awk '{print $2}'
+#  become: true
+#  register: zone_state
+#  until: zone_state.stdout == 'running'
+#  retries: 30
+#  delay: 10
+#  changed_when: false
+#  when: zone_exists.rc != 0 or "'running' not in zone_exists.stdout"
+
+- name: Check if python3 is installed in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} which python3
+  become: true
+  register: python3_installed
+  changed_when: false
+  failed_when: false
+
+- name: Update package cache in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} apt-get update
+  become: true
+  register: apt_update_result
+  changed_when: apt_update_result.rc == 0
+  failed_when: apt_update_result.rc != 0
+  when:
+    - python3_installed.rc != 0
+
+- name: Install python3 and locales-all in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} apt-get install -y python3 locales-all
+  become: true
+  register: python3_install_result
+  changed_when: python3_install_result.rc == 0
+  failed_when: python3_install_result.rc != 0
+  when:
+    - python3_installed.rc != 0
+
+- name: Verify python3 installation in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} python3 --version
+  become: true
+  register: python3_version
+  changed_when: false
+  failed_when: false
+
+- name: Debug python3 version
+  ansible.builtin.debug:
+    msg: "Python3 version in zone: {{ python3_version.stdout | default('not installed') }}"
+
+- name: Check if user {{ metadb_username }} exists in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} id {{ metadb_username }}
+  become: true
+  register: user_exists
+  changed_when: false
+  failed_when: false
+
+- name: Create user {{ metadb_username }} in zone {{ metadb_zone_name }}
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} useradd -m -d {{ metadb_user_home }} -s {{ metadb_user_shell }} {{ metadb_username }}
+  become: true
+  register: user_create_result
+  changed_when: user_create_result.rc == 0
+  when: user_exists.rc != 0
+
+- name: Set password for user {{ metadb_username }} in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} echo '{{ metadb_username }}:{{ metadb_password }}' | /usr/sbin/chpasswd
+  become: true
+  register: password_set_result
+  changed_when: password_set_result.rc == 0
+  no_log: true
+  when: user_exists.rc != 0 or true  # Always ensure password is set correctly
+
+- name: Ensure /etc/sudoers.d directory exists in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} mkdir -p /etc/sudoers.d
+  become: true
+  register: sudoers_dir_result
+  changed_when: false
+  failed_when: false
+  when: user_exists.rc != 0 or true
+
+- name: Check if sudoers file for {{ metadb_username }} exists in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} test -f /etc/sudoers.d/{{ metadb_username }}
+  become: true
+  register: sudoers_file_exists
+  changed_when: false
+  failed_when: false
+  when: user_exists.rc != 0 or true
+
+- name: Create sudoers file for {{ metadb_username }} in zone
+  ansible.builtin.shell: "pfexec zlogin {{ metadb_zone_name }} touch /etc/sudoers.d/{{ metadb_username }}"
+  become: true
+  register: sudoers_create_result
+  changed_when: sudoers_create_result.rc == 0
+  failed_when: sudoers_create_result.rc != 0
+  when:
+    - sudoers_file_exists.rc != 0
+
+- name: Configure passwordless sudo for {{ metadb_username }} in zone
+  ansible.builtin.shell: "pfexec zlogin {{ metadb_zone_name }} \"echo '{{ metadb_username }} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/{{ metadb_username }}\" && pfexec zlogin {{ metadb_zone_name }} chmod 440 /etc/sudoers.d/{{ metadb_username }}"
+  become: true
+  register: sudoers_config_result
+  changed_when: sudoers_config_result.rc == 0
+  failed_when: sudoers_config_result.rc != 0
+  when:
+    - sudoers_file_exists.rc != 0
+
+- name: Validate sudoers configuration in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} visudo -c -f /etc/sudoers.d/{{ metadb_username }}
+  become: true
+  register: sudoers_validate_result
+  changed_when: false
+  failed_when: sudoers_validate_result.rc != 0
+  when:
+    - sudoers_file_exists.rc == 0 or sudoers_config_result is defined
+
+- name: Test sudo access for {{ metadb_username }} in zone
+  ansible.builtin.command: pfexec zlogin {{ metadb_zone_name }} su - {{ metadb_username }} -c "sudo -n whoami"
+  become: true
+  register: sudo_test_result
+  changed_when: false
+  failed_when: false
+  when: user_exists.rc != 0 or true
+
+- name: Debug sudo test result
+  ansible.builtin.debug:
+    msg: "Sudo test for {{ metadb_username }}: {{ sudo_test_result.stdout | default('not tested') }}"
+  when: user_exists.rc != 0 or true

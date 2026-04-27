@@ -1,0 +1,55 @@
+---
+# Become / Privilege Escalation Settings (Front Nodes Only)
+
+front_nodes:
+  hosts:
+    front1:
+      ansible_host: 192.168.122.123
+      metadb_allowed_address: "192.168.122.133/24"
+      metadb_mac_addr: "2:8:20:32:da:2e"
+      metadb_physical_nic: "metadb0"
+    front2:
+      ansible_host: 192.168.122.124
+      metadb_allowed_address: "192.168.122.134/24"
+      metadb_mac_addr: "2:8:20:32:da:2f"
+      metadb_physical_nic: "metadb0"
+
+    front3:
+      ansible_host: 192.168.122.125
+      metadb_allowed_address: "192.168.122.135/24"
+      metadb_mac_addr: "2:8:20:32:da:30"
+      metadb_physical_nic: "metadb0"
+
+volume_nodes:
+  hosts:
+    volume1:
+      ansible_host: 192.168.122.123
+
+    volume2:
+      ansible_host: 192.168.122.124
+
+    volume3:
+      ansible_host: 192.168.122.125
+
+s3_nodes:
+  hosts:
+    s3_node1:
+      ansible_host: 192.168.122.123
+
+    s3_node2:
+      ansible_host: 192.168.122.124
+
+    s3_node3:
+      ansible_host: 192.168.122.125
+
+metadb_nodes:
+  hosts:
+    meta1:
+      ansible_host: 192.168.122.133
+
+    meta2:
+      ansible_host: 192.168.122.134
+
+    meta3:
+      ansible_host: 192.168.122.135
+

@@ -1,0 +1,77 @@
+---
+- name: Ensure /opt/s3stor/conf directory exists
+  ansible.builtin.file:
+    path: /opt/s3stor/conf
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Deploy filer configs
+  ansible.builtin.template:
+    src: filer.toml.j2
+    dest: /opt/s3stor/bin/filer.toml
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Deploy s3 configs
+  ansible.builtin.template:
+    src: s3.json.j2
+    dest: /opt/s3stor/conf/s3.json
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Ensure /opt/s3stor/bin directory exists
+  ansible.builtin.file:
+    path: /opt/s3stor/bin
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Deploy SMF service script
+  ansible.builtin.template:
+    src: s3stor-s3-smf.sh.j2
+    dest: /opt/s3stor/bin/s3stor-s3-smf.sh
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  notify: Import SMF service
+
+- name: Ensure SMF manifest directory exists
+  ansible.builtin.file:
+    path: /var/svc/manifest/site
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Deploy SMF manifest
+  ansible.builtin.template:
+    src: s3stor-s3-smf.xml.j2
+    dest: /var/svc/manifest/site/s3stor-s3.xml
+    mode: '0644'
+    owner: root
+    group: root
+  become: true
+  notify: Import SMF service
+
+- name: Import SMF service
+  ansible.builtin.command: svccfg import /var/svc/manifest/site/s3stor-s3.xml
+  become: true
+  changed_when: false
+  tags: [smf]
+
+- name: Enable S3Stor service
+  ansible.builtin.command: svcadm enable s3stor-s3
+  become: true
+  changed_when: false
+  tags: [smf]

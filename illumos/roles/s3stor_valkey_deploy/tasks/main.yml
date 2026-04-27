@@ -1,0 +1,133 @@
+---
+- name: Install build dependencies (Debian/Ubuntu)
+  apt:
+    name:
+      - build-essential
+      - wget
+      - libsystemd-dev
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install build dependencies (RHEL/CentOS)
+  yum:
+    name:
+      - gcc
+      - make
+      - wget
+      - systemd-devel
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Create installation directory
+  file:
+    path: "{{ install_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create config directory
+  file:
+    path: "{{ conf_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create data directory
+  file:
+    path: "{{ data_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Download Valkey Source
+  get_url:
+    url: "{{ valkey_download_url }}"
+    dest: "/tmp/valkey-{{ valkey_version }}.tar.gz"
+    mode: '0644'
+
+- name: Extract Valkey Source
+  unarchive:
+    src: "/tmp/valkey-{{ valkey_version }}.tar.gz"
+    dest: "{{ install_dir }}"
+    remote_src: yes
+    creates: "{{ install_dir }}/valkey-{{ valkey_version }}"
+
+- name: Compile Valkey
+  command: make -j{{ ansible_processor_vcpus }}
+  args:
+    chdir: "{{ install_dir }}/valkey-{{ valkey_version }}"
+    creates: "{{ install_dir }}/valkey-{{ valkey_version }}/src/valkey-server"
+
+- name: Install Valkey Binaries
+  command: make install
+  args:
+    chdir: "{{ install_dir }}/valkey-{{ valkey_version }}"
+    creates: "/usr/local/bin/valkey-server"
+
+- name: Deploy Valkey Configuration
+  template:
+    src: valkey.conf.j2
+    dest: "{{ conf_dir }}/valkey.conf"
+    mode: '0644'
+  notify: Restart Valkey
+
+- name: Deploy Systemd Service
+  copy:
+    dest: /etc/systemd/system/valkey.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Valkey In-Memory Data Store
+      After=network.target
+
+      [Service]
+      Type=notify
+      ExecStart=/usr/local/bin/valkey-server {{ conf_dir }}/valkey.conf
+      ExecStop=/usr/local/bin/valkey-cli -p {{ valkey_port }} shutdown
+      Restart=always
+      User=root
+      Group=root
+
+      [Install]
+      WantedBy=multi-user.target
+      notify: Reload Systemd
+
+- name: Enable and Start Valkey Service
+  ansible.builtin.shell: |
+    (nohup systemctl enable valkey.service && systemctl start valkey.service > /dev/null 2>&1 &)
+
+- name: Wait for Valkey to be ready
+  wait_for:
+    port: "{{ valkey_port }}"
+    timeout: 30
+
+- name: Gather all cluster node IPs
+  set_fact:
+    cluster_nodes: >-
+      {% for host in groups['metadb_nodes'] %}
+      {{ hostvars[host]['ansible_host'] }}:{{ valkey_port }}
+      {% if not loop.last %} {% endif %}
+      {% endfor %}
+
+- name: Check if Cluster is already initialized
+  command: /usr/local/bin/valkey-cli -h {{ ansible_host }} -p {{ valkey_port }} cluster info
+  register: cluster_info
+  changed_when: false
+  failed_when: false
+  run_once: true
+
+- name: Initialize Cluster
+  command: >-
+    /usr/local/bin/valkey-cli --cluster create {{ cluster_nodes }}
+    --cluster-replicas 0
+    --cluster-yes
+  when: >-
+    cluster_info.rc != 0 or
+    'cluster_state' not in cluster_info.stdout or
+    cluster_info.stdout is search('cluster_state:fail')
+  run_once: true
+
+
+# Note: The logic above attempts to run create if cluster info fails or state is fail.
+# For a fresh install, cluster_info will likely fail (connection refused or no cluster state), triggering creation.
+

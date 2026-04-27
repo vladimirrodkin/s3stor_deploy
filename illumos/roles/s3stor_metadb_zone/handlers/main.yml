@@ -1,0 +1,10 @@
+---
+- name: Refresh zone configuration
+  ansible.builtin.command: pfexec zonecfg -z {{ metadb_zone_name }} verify
+  become: true
+  changed_when: false
+
+- name: Restart zone {{ metadb_zone_name }}
+  ansible.builtin.command: pfexec zoneadm -z {{ metadb_zone_name }} reboot
+  become: true
+  changed_when: true

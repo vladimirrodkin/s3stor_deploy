@@ -1,0 +1,29 @@
+{% if inventory_hostname in groups['front_nodes'] %}
+{% set current_host_index = groups['front_nodes'].index(inventory_hostname) %}
+{% set metadb_ip = hostvars[inventory_hostname]['metadb_allowed_address'] %}
+
+{
+   "autoboot" : "{{ metadb_zone_autoboot|lower }}",
+   "brand" : "{{ metadb_zone_brand }}",
+   "ip-type" : "exclusive",
+   "net" : [
+      {
+         "global-nic" : "{{ metadb_global_nic }}",
+         "physical" : "{{ metadb_physical_nic }}",
+         "allowed-address" : "{{ metadb_ip }}",
+         "defrouter" : "{{ metadb_defrouter }}"
+      }
+   ],
+   "resolvers" : [
+      "{{ metadb_resolver }}"
+   ],
+   "zonename" : "{{ metadb_zone_name }}",
+   "zonepath" : "{{ metadb_zone_path }}"
+}
+
+{% else %}
+# ERROR: This host ({{ inventory_hostname }}) is not in front_nodes group
+# This script should not be deployed to this host
+echo "Error: Invalid host configuration"
+exit 1
+{% endif %}

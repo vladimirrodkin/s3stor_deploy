@@ -1,0 +1,22 @@
+# Valkey Configuration
+bind 0.0.0.0
+port {{ valkey_port }}
+protected-mode no
+daemonize no
+pidfile /var/run/valkey/valkey.pid
+loglevel notice
+logfile ""
+databases 1
+dir {{ data_dir }}
+
+# Cluster Configuration
+cluster-enabled yes
+cluster-config-file nodes.conf
+cluster-node-timeout {{ cluster_timeout }}
+cluster-require-full-coverage no
+
+# Memory & Persistence
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+appendonly yes
+appendfilename "appendonly.aof"

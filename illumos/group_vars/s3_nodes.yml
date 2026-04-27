@@ -1,0 +1,22 @@
+---
+# S3Stor Configuration
+s3stor_s3_filer_port: 8888
+s3stor_s3_default_replica_placement: "001"
+s3stor_s3_config: /opt/s3stor/conf/s3.json
+s3stor_s3_filer_metrics_port: 9326
+s3stor_s3_metrics_port: 9327
+s3stor_s3_filer_path: /buckets
+s3stor_s3_port: 8333
+
+# Become Settings
+ansible_timeout: 60
+ansible_user: 
+# ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+ansible_ssh_pass: ""
+ansible_become: true
+ansible_become_method: sudo
+ansible_become_user: root
+ansible_become_timeout: 60
+ansible_become_ask_pass: false
+ansible_ssh_common_args: '-o ConnectTimeout=60 -o ServerAliveInterval=60 -o IdentitiesOnly=yes'
+ansible_python_interpreter: auto_silent

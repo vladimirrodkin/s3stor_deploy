@@ -1,0 +1,30 @@
+<?xml version='1.0'?>
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<service_bundle type='manifest' name='site/s3stor-s3'>
+  <service name='site/s3stor-s3' type='service' version='1'>
+    <create_default_instance enabled='false'/>
+    <single_instance/>
+    
+    <dependency name='network' grouping='require_all' restart_on='refresh' type='service'>
+      <service_fmri value='svc:/network/physical:default'/>
+    </dependency>
+    
+    <exec_method type='method' name='start' exec='/opt/s3stor/bin/s3stor-s3-smf.sh' timeout_seconds='60'/>
+    <exec_method type='method' name='stop' exec=':kill' timeout_seconds='60'/>
+    
+    <property_group name='general' type='framework'>
+      <propval name='action_authorization' type='astring' value='solaris.smf.manage.s3stor-s3'/>
+    </property_group>
+    
+    <stability value='Evolving'/>
+    
+    <template>
+      <common_name>
+        <loctext xml:lang='C'>S3Stor S3 Service</loctext>
+      </common_name>
+      <documentation>
+        <manpage title='s3stor-s3' section='1'/>
+      </documentation>
+    </template>
+  </service>
+</service_bundle>

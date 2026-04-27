@@ -1,0 +1,8 @@
+---
+- name: Deploy metadb LX zones to front_nodes
+  hosts: front_nodes
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: s3stor_metadb_zone

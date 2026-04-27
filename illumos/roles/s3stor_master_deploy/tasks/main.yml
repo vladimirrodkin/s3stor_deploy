@@ -1,0 +1,72 @@
+---
+- name: Create destination directory {{ s3stor_dest_path }}
+  ansible.builtin.file:
+    path: "{{ s3stor_dest_path }}"
+    state: directory
+    mode: "{{ s3stor_file_mode }}"
+    owner: "{{ s3stor_file_owner }}"
+    group: "{{ s3stor_file_group }}"
+  become: true
+  become_flags: "-n"
+
+- name: Synchronize files from Control Node to front_nodes
+  ansible.builtin.copy:
+    src: "{{ s3stor_software }}/"
+    dest: "{{ s3stor_dest_path }}/"
+    mode: "{{ s3stor_file_mode }}"
+    owner: "{{ s3stor_file_owner }}"
+    group: "{{ s3stor_file_group }}"
+    directory_mode: "{{ s3stor_file_mode }}"
+  become: true
+  become_flags: "-n"
+#  vars:
+#    ansible_connection: local
+- name: Ensure /opt/s3stor/bin directory exists
+  ansible.builtin.file:
+    path: /opt/s3stor/bin
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Deploy SMF service script
+  ansible.builtin.template:
+    src: s3stor-master-smf.sh.j2
+    dest: /opt/s3stor/bin/s3stor-master-smf.sh
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  notify: Import SMF service
+
+- name: Ensure SMF manifest directory exists
+  ansible.builtin.file:
+    path: /var/svc/manifest/site
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Deploy SMF manifest
+  ansible.builtin.template:
+    src: s3stor-master-smf.xml.j2
+    dest: /var/svc/manifest/site/s3stor-master.xml
+    mode: '0644'
+    owner: root
+    group: root
+  become: true
+  notify: Import SMF service
+
+- name: Import SMF service
+  ansible.builtin.command: svccfg import /var/svc/manifest/site/s3stor-master.xml
+  become: true
+  changed_when: false
+  tags: [smf]
+
+- name: Enable S3Stor service
+  ansible.builtin.command: svcadm enable s3stor-master
+  become: true
+  changed_when: false
+  tags: [smf]
