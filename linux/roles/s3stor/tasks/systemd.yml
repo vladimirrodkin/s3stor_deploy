@@ -1,0 +1,48 @@
+- name: Deploy Master systemd service
+  template:
+    src: s3stor-master.service.j2
+    dest: /etc/systemd/system/s3stor-master.service
+    mode: '0644'
+  when: inventory_hostname in groups['s3stor_masters']
+  notify: Restart s3stor Master
+
+- name: Deploy Volume systemd service
+  template:
+    src: s3stor-volume.service.j2
+    dest: /etc/systemd/system/s3stor-volume.service
+    mode: '0644'
+  when: inventory_hostname in groups['s3stor_volumes']
+  notify: Restart s3stor Volume
+
+- name: Deploy Filer systemd service
+  template:
+    src: s3stor-filer.service.j2
+    dest: /etc/systemd/system/s3stor-filer.service
+    mode: '0644'
+  when: inventory_hostname in groups['s3stor_filers']
+  notify: Restart s3stor Filer
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and start s3stor Master
+  systemd:
+    name: s3stor-master
+    enabled: yes
+    state: started
+  when: inventory_hostname in groups['s3stor_masters']
+
+- name: Enable and start s3stor Volume
+  systemd:
+    name: s3stor-volume
+    enabled: yes
+    state: started
+  when: inventory_hostname in groups['s3stor_volumes']
+
+- name: Enable and start s3stor Filer
+  systemd:
+    name: s3stor-filer
+    enabled: yes
+    state: started
+  when: inventory_hostname in groups['s3stor_filers']

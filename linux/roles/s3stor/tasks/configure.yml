@@ -1,0 +1,27 @@
+- name: Deploy filer configuration
+  template:
+    src: filer.toml.j2
+    dest: "{{ s3stor_conf_dir }}/filer.toml"
+    mode: '0644'
+  when: inventory_hostname in groups['s3stor_filers']
+#  notify: Restart s3stor Filer
+
+- name: Deploy s3 configuration
+  template:
+    src: s3.json.j2
+    dest: "{{ s3stor_conf_dir }}/s3.json"
+    mode: '0644'
+  when: inventory_hostname in groups['s3stor_filers']
+  notify: Restart s3stor Filer
+
+- name: Ensure correct permissions on data directories
+  file:
+    path: "{{ s3stor_data_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - master
+    - volume
+    - filer

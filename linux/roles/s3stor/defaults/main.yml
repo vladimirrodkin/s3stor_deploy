@@ -1,0 +1,42 @@
+seaweedfs_version: "4.22"
+s3stor_install_dir: /opt/seaweedfs
+s3stor_bin_dir: /usr/local/bin
+s3stor_conf_dir: /etc/seaweedfs
+s3stor_data_dir: /var/lib/s3stor
+
+# Master
+s3stor_master_port: 9333
+s3stor_master_grpc_port: 19333
+s3stor_default_replication: "001"
+s3stor_default_volume_size: 10240
+s3stor_master_metrics_port: 9324
+
+# Volume
+s3stor_volume_port: 8080
+s3stor_volume_grpc_port: 18080
+s3stor_volume_max: 100
+s3stor_volume_datacenter: dc1
+s3stor_volume_rack: rack1
+s3stor_volume_compaction_speed: 500
+s3stor_volume_file_size_limit: 5242880
+s3stor_volume_metrics_port: 9325
+
+# Filer & S3
+s3stor_filer_port: 8888
+s3stor_filer_grpc_port: 18888
+s3stor_filer_s3_port: 8333
+s3stor_domain: "s3.local"
+s3stor_s3_config: /etc/seaweedfs/s3.json
+s3stor_filer_metrics_port: 9326
+s3stor_s3_metrics_port: 9327
+
+# Dynamic peer lists (auto-generated from inventory)
+s3stor_master_peers: >-
+  {% for host in groups['s3stor_masters'] %}
+    {{ hostvars[host]['ansible_host'] | default(hostvars[host]['ansible_default_ipv4']['address'] | default(host)) }}:9333{% if not loop.last %},{% endif %}
+  {% endfor %}
+
+s3stor_master_grpc_peers: >-
+  {% for host in groups['s3stor_masters'] %}
+    {{ hostvars[host]['ansible_host'] | default(hostvars[host]['ansible_default_ipv4']['address'] | default(host)) }}:{{ s3stor_master_grpc_port }}{% if not loop.last %},{% endif %}
+  {% endfor %}

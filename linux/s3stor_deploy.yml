@@ -1,0 +1,8 @@
+---
+- name: Deploy s3stor Cluster
+  hosts: s3stor
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - s3stor

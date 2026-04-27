@@ -1,0 +1,19 @@
+[Unit]
+Description=s3stor Filer & S3 Gateway
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ s3stor_bin_dir }}/weed filer \
+  -ip={{ ansible_host | default(ansible_default_ipv4.address) }} \
+  -port={{ s3stor_filer_port }} \
+  -s3 \
+  -s3.port={{ s3stor_filer_s3_port }}
+  -s3.config={{ s3stor_s3_config }} \
+  -s3.metricsPort={{ s3stor_s3_metrics_port }}
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

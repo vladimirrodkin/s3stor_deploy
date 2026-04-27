@@ -1,0 +1,14 @@
+- name: Restart s3stor Master
+  systemd:
+    name: s3stor-master
+    state: restarted
+
+- name: Restart s3stor Volume
+  systemd:
+    name: s3stor-volume
+    state: restarted
+
+- name: Restart s3stor Filer
+  systemd:
+    name: s3stor-filer
+    state: restarted

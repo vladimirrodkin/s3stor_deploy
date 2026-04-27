@@ -4,11 +4,45 @@
 metadb_nodes:
   hosts:
     meta1:
-      ansible_host: 192.168.122.133
+      ansible_host: 192.168.122.220
 
     meta2:
-      ansible_host: 192.168.122.134
+      ansible_host: 192.168.122.182
 
     meta3:
-      ansible_host: 192.168.122.135
+      ansible_host: 192.168.122.219
 
+s3stor:
+  children:
+    s3stor_masters:
+      hosts:
+        master1:
+          ansible_host: 192.168.122.220
+
+        master2:
+          ansible_host: 192.168.122.182
+
+        master3:
+          ansible_host: 192.168.122.219
+
+    s3stor_filers:
+      hosts:
+        filer1:
+          ansible_host: 192.168.122.220
+
+        filer2:
+          ansible_host: 192.168.122.182
+
+        filer3:
+          ansible_host: 192.168.122.219
+
+    s3stor_volumes:
+      hosts:
+        volume1:
+          ansible_host: 192.168.122.220
+
+        volume2:
+          ansible_host: 192.168.122.182
+
+        volume3:
+          ansible_host: 192.168.122.219

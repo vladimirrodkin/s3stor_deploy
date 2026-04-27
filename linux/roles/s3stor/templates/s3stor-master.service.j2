@@ -1,0 +1,21 @@
+[Unit]
+Description=s3stor Master Node
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ s3stor_bin_dir }}/weed master \
+  -ip={{ ansible_host | default(ansible_default_ipv4.address) }} \
+  -port={{ s3stor_master_port }} \
+  -mdir={{ s3stor_data_dir }}/master \
+  -peers={{ s3stor_master_peers | trim }} \
+  -defaultReplication={{ s3stor_default_replication }} \
+  -garbageThreshold=0.3 \
+  -volumeSizeLimitMB={{ s3stor_default_volume_size }} \
+  -metricsPort={{ s3stor_master_metrics_port }}
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

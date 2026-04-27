@@ -1,0 +1,24 @@
+[Unit]
+Description=s3stor Volume Node
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ s3stor_bin_dir }}/weed volume \
+  -ip={{ ansible_host | default(ansible_default_ipv4.address) }} \
+  -port={{ s3stor_volume_port }} \
+  -dir={{ s3stor_data_dir }}/volume \
+  -max={{ s3stor_volume_max }} \
+  -mserver={{ s3stor_master_peers | trim }}
+  -dataCenter={{ s3stor_volume_datacenter }} \
+  -rack={{ s3stor_volume_rack }} \
+  -compactionMBps={{ s3stor_volume_compaction_speed }} \
+  -fileSizeLimitMB={{ s3stor_volume_file_size_limit }} \
+  -metricsPort={{ s3stor_volume_metrics_port }}
+
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

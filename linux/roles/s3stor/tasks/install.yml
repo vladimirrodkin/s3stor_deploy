@@ -1,0 +1,45 @@
+- name: Install prerequisites
+  apt:
+    name:
+      - wget
+      - curl
+      - tar
+      - systemd
+    state: present
+    update_cache: yes
+
+- name: Create required directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ s3stor_install_dir }}"
+    - "{{ s3stor_conf_dir }}"
+    - "{{ s3stor_data_dir }}"
+    - "{{ s3stor_data_dir }}/master"
+    - "{{ s3stor_data_dir }}/volume"
+    - "{{ s3stor_data_dir }}/filer"
+    - "{{ s3stor_data_dir }}/filer/leveldb2"
+
+- name: Download SeaweedFS binary archive
+  get_url:
+    url: "https://github.com/seaweedfs/seaweedfs/releases/download/{{ seaweedfs_version }}/linux_amd64.tar.gz"
+    dest: "/tmp/seaweedfs_{{ seaweedfs_version }}.tar.gz"
+    mode: '0644'
+  register: download_result
+  changed_when: false
+
+- name: Extract SeaweedFS binary
+  unarchive:
+    src: "/tmp/seaweedfs_{{ seaweedfs_version }}.tar.gz"
+    dest: "{{ s3stor_install_dir }}"
+    remote_src: yes
+    creates: "{{ s3stor_install_dir }}/weed"
+
+- name: Create symlink for weed binary
+  file:
+    src: "{{ s3stor_install_dir }}/weed"
+    dest: "{{ s3stor_bin_dir }}/weed"
+    state: link
+    force: yes
