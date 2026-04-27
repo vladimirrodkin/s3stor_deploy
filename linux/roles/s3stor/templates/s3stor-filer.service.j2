@@ -7,6 +7,7 @@ Type=simple
 ExecStart={{ s3stor_bin_dir }}/weed filer \
   -ip={{ ansible_host | default(ansible_default_ipv4.address) }} \
   -port={{ s3stor_filer_port }} \
+  -master={{ s3stor_master_peers | trim }} \
   -s3 \
   -s3.port={{ s3stor_filer_s3_port }}
   -s3.config={{ s3stor_s3_config }} \
